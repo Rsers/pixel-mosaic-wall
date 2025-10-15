@@ -48,6 +48,10 @@ Thumbs.db
 *.tmp
 .cache/
 
+# 打包文件
+*.tar.gz
+*.zip
+
 # Vercel
 .vercel
 
