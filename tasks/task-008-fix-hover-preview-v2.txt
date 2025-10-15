@@ -1,0 +1,102 @@
+# 任务：修复大图预览功能不显示问题
+
+## 问题分析
+1. ✅ 大图文件已生成（300x300，JPEG 90%质量）
+2. ✅ HTML 包含 Modal 元素（#imageModal）
+3. ✅ CSS 样式完整（.modal, .modal-content）
+4. ✅ JavaScript 包含悬停事件（mouseenter/mouseleave）
+5. ❌ **实际测试时悬停不显示大图**
+
+## 潜在问题
+1. **延迟时间过长**：当前设置 500ms，用户可能没等到就移开鼠标
+2. **CSS transform 冲突**：`.grid-cell:hover { transform: scale(1.1) }` 可能干扰事件
+3. **事件绑定时机**：可能在 DOM 未完全加载时绑定
+
+## 修复方案
+
+### 方案1：缩短延迟时间（推荐）
+将悬停延迟从 500ms 改为 200ms，更符合用户习惯
+
+### 方案2：调整 CSS 避免冲突
+为 filled 格子单独设置 hover 样式，不使用 transform
+
+### 方案3：改进事件逻辑
+- 移除延迟（立即显示）
+- 使用事件委托而非单独绑定
+
+## 实现要求
+
+**文件：static/script.js**
+
+修改第 143-161 行的悬停事件：
+
+```javascript
+// 新增：悬停显示大图（优化版）
+cell.addEventListener('mouseenter', function(e) {
+    // 缩短延迟到 200ms
+    hoverTimer = setTimeout(() => {
+        showImagePreview(pixel.image_url);
+    }, 200);
+});
+
+cell.addEventListener('mouseleave', function(e) {
+    // 取消延迟显示
+    if (hoverTimer) {
+        clearTimeout(hoverTimer);
+        hoverTimer = null;
+    }
+    // 隐藏Modal
+    hideImagePreview();
+});
+```
+
+**文件：static/style.css**
+
+修改第 232-236 行，为 filled 格子单独设置 hover 样式：
+
+```css
+/* 已填充格子的悬停效果（移除 transform 避免事件冲突） */
+.grid-cell.filled:hover {
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+    /* 移除 transform: scale(1.1); */
+}
+
+/* 只对未填充格子应用缩放效果 */
+.grid-cell.unfilled:hover {
+    transform: scale(1.05);
+    z-index: 1;
+}
+```
+
+## 测试验证
+1. 打开浏览器开发者工具 Console
+2. 鼠标悬停在已填充的格子上
+3. 检查是否显示 Modal（#imageModal display: flex）
+4. 检查是否加载大图（Network 面板查看 *_large.jpg 请求）
+5. 验证鼠标移开后 Modal 隐藏
+
+## 调试技巧
+如果仍不显示，在 `showImagePreview` 函数开头添加 console.log：
+
+```javascript
+function showImagePreview(thumbnailUrl) {
+    console.log('显示预览:', thumbnailUrl);
+    const largeUrl = thumbnailUrl.replace('.jpg', '_large.jpg');
+    console.log('大图URL:', largeUrl);
+    
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    
+    modalImage.src = largeUrl;
+    modal.style.display = 'flex';
+    console.log('Modal 显示状态:', modal.style.display);
+}
+```
+
+## 输出
+生成两个修复后的完整文件：
+1. `static/script.js`（修改延迟时间）
+2. `static/style.css`（修复 hover 冲突）
+

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>像素拼图墙</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="title">🎨 像素拼图墙</h1>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="templateSelect">选择图案：</label>
+                <select id="templateSelect" class="template-select">
+                    <option value="heart">❤️ 爱心</option>
+                    <option value="plane">✈️ 飞机</option>
+                    <option value="balloon">🎈 气球</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <input type="file" id="fileInput" multiple accept="image/jpeg,image/png,image/gif" class="file-input">
+                <button id="uploadBtn" class="upload-btn">上传图片</button>
+            </div>
+
+            <div id="status" class="status"></div>
+        </div>
+
+        <div id="grid" class="pixel-grid"></div>
+
+        <div class="auto-refresh">
+            <label>
+                <input type="checkbox" id="autoRefresh"> 自动刷新（每10秒）
+            </label>
+        </div>
+
+        <!-- 动画控制面板 -->
+        <div class="animation-controls">
+            <label class="control-item">
+                <input type="checkbox" id="enableAnimation"> ✨ 启用动画效果
+            </label>
+            <label class="control-item">
+                动画模式:
+                <select id="animationMode">
+                    <option value="wave">🌊 波浪扩散</option>
+                    <option value="flow">➡️ 顺序流动</option>
+                    <option value="sparkle">✨ 随机闪烁</option>
+                    <option value="flip">🔄 翻转循环</option>
+                </select>
+            </label>
+            <label class="control-item">
+                速度:
+                <input type="range" id="animationSpeed" min="50" max="400" value="150" step="50">
+                <span id="speedValue">中</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- 悬停预览Modal -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <img id="modalImage" src="" alt="预览大图">
+        </div>
+    </div>
+
+    <!-- 全屏查看Modal -->
+    <div id="fullscreenModal" class="fullscreen-modal">
+        <img id="fullscreenImage" src="" alt="全屏大图">
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,535 @@
+/* 基础样式重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+/* 容器布局 */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+/* 标题样式 */
+.title {
+    font-size: 3rem;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    margin-bottom: 2rem;
+    font-weight: 700;
+}
+
+/* 控制区域 */
+.controls {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+    backdrop-filter: blur(10px);
+}
+
+/* 进度信息区域 */
+.progress-info {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    backdrop-filter: blur(10px);
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 30px;
+    background: #e0e0e0;
+    border-radius: 15px;
+    overflow: hidden;
+    margin-bottom: 0.8rem;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    transition: width 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.progress-text {
+    font-size: 1.1rem;
+    color: #333;
+    line-height: 1.6;
+}
+
+.progress-text strong {
+    color: #667eea;
+    font-weight: 700;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+/* 下拉选择框 */
+.template-select {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e1e5e9;
+    border-radius: 10px;
+    background: white;
+    font-size: 1rem;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 150px;
+}
+
+.template-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* 文件输入 */
+.file-input {
+    padding: 0.75rem;
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.file-input:hover {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+/* 上传按钮 */
+.upload-btn {
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.upload-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.upload-btn:active {
+    transform: translateY(0);
+}
+
+.upload-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* 状态提示 */
+.status {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.status.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.status.info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* 像素网格 */
+.pixel-grid {
+    display: grid;
+    grid-template-columns: repeat(20, 1fr);
+    grid-template-rows: repeat(20, 1fr);
+    width: 600px;
+    height: 600px;
+    margin: 0 auto;
+    gap: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.grid-cell {
+    aspect-ratio: 1 / 1;
+    /* 强制正方形 */
+    background: rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* 已填充的格子 */
+.grid-cell.filled {
+    background-color: transparent;
+    border: 1px solid rgba(102, 126, 234, 0.5);
+}
+
+/* 未填充但在模板中的格子 */
+.grid-cell.unfilled {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
+/* 不在模板中的格子（透明） */
+.grid-cell.empty {
+    background: transparent;
+    border: none;
+    opacity: 0.1;
+}
+
+/* 未填充格子的悬停效果 */
+.grid-cell.unfilled:hover {
+    transform: scale(1.05);
+    z-index: 1;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+/* 自动刷新选项 */
+.auto-refresh {
+    margin-top: 1.5rem;
+    color: white;
+    font-size: 0.9rem;
+}
+
+.auto-refresh label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.auto-refresh input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .title {
+        font-size: 2rem;
+    }
+
+    .pixel-grid {
+        width: 90vw;
+        height: 90vw;
+        max-width: 400px;
+        max-height: 400px;
+    }
+
+    .control-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .template-select,
+    .file-input,
+    .upload-btn {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+
+    .title {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .controls {
+        padding: 1rem;
+    }
+
+    .pixel-grid {
+        width: 95vw;
+        height: 95vw;
+    }
+}
+
+/* 加载动画 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.grid-cell {
+    animation: fadeIn 0.3s ease;
+}
+
+/* 大图预览悬浮窗（改为跟随鼠标） */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    pointer-events: none;
+    /* 让鼠标事件穿透，防止触发 mouseleave */
+    animation: fadeIn 0.15s ease;
+}
+
+.modal-content {
+    position: relative;
+    animation: zoomIn 0.15s ease;
+}
+
+.modal-content img {
+    display: block;
+    width: 75px;
+    /* 300 / 4 = 75px */
+    height: 75px;
+    border-radius: 6px;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    object-fit: cover;
+}
+
+/* Modal动画效果 */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes zoomIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 悬停提示 */
+.grid-cell.filled:hover {
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+}
+
+/* 全屏查看Modal */
+.fullscreen-modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    justify-content: center;
+    align-items: center;
+    animation: modalFadeIn 0.3s ease;
+    cursor: pointer;
+}
+
+.fullscreen-modal.active {
+    display: flex;
+}
+
+.fullscreen-modal img {
+    max-width: 90%;
+    max-height: 90%;
+    width: auto;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
+    object-fit: contain;
+}
+
+/* 关闭提示 */
+.fullscreen-modal::before {
+    content: '点击任意处关闭';
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1rem;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+    pointer-events: none;
+}
+
+/* 动画控制面板 */
+.animation-controls {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 1.2rem;
+    border-radius: 12px;
+    margin-top: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.animation-controls .control-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #333;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.animation-controls select {
+    padding: 0.4rem 0.8rem;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    background: white;
+    color: #333;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.animation-controls select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.animation-controls input[type="range"] {
+    width: 120px;
+    cursor: pointer;
+}
+
+.animation-controls #speedValue {
+    min-width: 40px;
+    font-weight: 600;
+    color: #667eea;
+}
+
+/* 动画高亮效果 */
+@keyframes highlightPulse {
+    0% {
+        transform: scale(1);
+        filter: brightness(1);
+        box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+    }
+
+    50% {
+        transform: scale(1.2);
+        filter: brightness(1.6);
+        box-shadow: 0 0 25px rgba(255, 255, 255, 1);
+        border: 2px solid rgba(255, 215, 0, 0.9);
+    }
+
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
+        box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+    }
+}
+
+.grid-cell.animate-highlight {
+    animation: highlightPulse 0.6s ease-in-out;
+    z-index: 10;
+}
+
+/* 翻转动画效果 */
+@keyframes flipAnimation {
+    0% {
+        transform: perspective(400px) rotateY(0deg);
+        filter: brightness(1);
+    }
+
+    50% {
+        transform: perspective(400px) rotateY(180deg);
+        filter: brightness(1.5);
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.8);
+    }
+
+    100% {
+        transform: perspective(400px) rotateY(360deg);
+        filter: brightness(1);
+    }
+}
+
+.grid-cell.animate-flip {
+    animation: flipAnimation 0.8s ease-in-out;
+    transform-style: preserve-3d;
+    z-index: 10;
+}
+
+/* 响应式：动画控制面板 */
+@media (max-width: 768px) {
+    .animation-controls {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .animation-controls .control-item {
+        width: 100%;
+        justify-content: center;
+    }
+}

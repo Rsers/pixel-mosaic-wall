@@ -1,0 +1,186 @@
+任务：开发前端页面
+
+项目背景：
+创建像素拼图墙的前端界面，用户可以选择图案模板并上传图片，实时查看拼图效果。
+
+页面要求：
+
+1. 整体布局
+   - 响应式设计，支持桌面和移动端
+   - 现代化、美观的UI设计
+   - 使用渐变背景或纯色背景
+   - 居中布局
+
+2. 功能区域
+   A. 页面标题
+      - "像素拼图墙" 或 "Pixel Art Wall"
+      - 大字体，醒目
+
+   B. 图案选择区域
+      - 下拉菜单选择模板（heart/plane/balloon）
+      - 显示中文名称（爱心/飞机/气球）
+      - 选择后立即加载该图案的状态
+
+   C. 图片上传区域
+      - 文件选择按钮（支持多文件）
+      - 上传按钮
+      - 显示上传进度（如：已上传 5/10）
+      - 成功/失败提示
+
+   D. 拼图展示区域
+      - 20x20 的网格布局（Grid）
+      - 每个格子：
+        * 已填充：显示用户上传的图片
+        * 未填充：灰色占位符或透明
+      - 整体尺寸：适应屏幕（推荐 600px x 600px）
+      - 格子之间有细微间隙
+
+3. 交互逻辑（JavaScript）
+   - 页面加载时：
+     * 默认选择"heart"模板
+     * 调用 /api/grid-status?template=heart 获取当前状态
+     * 渲染网格
+
+   - 切换模板时：
+     * 重新调用 /api/grid-status?template=xxx
+     * 更新网格显示
+
+   - 上传图片时：
+     * 验证文件格式（jpg/png/gif）
+     * 逐个上传（或批量上传）
+     * 显示上传进度
+     * 每上传成功一张，立即更新网格
+
+   - 自动刷新：
+     * 可选：每10秒自动刷新网格状态（查看其他用户的上传）
+
+4. 样式要求（CSS）
+   - 配色方案：现代化配色（推荐：深色背景+亮色元素，或清新色调）
+   - 按钮：圆角、悬停效果、点击反馈
+   - 网格：
+     * 格子大小一致
+     * 边框或间隙清晰
+     * 图片填充整个格子（cover）
+   - 响应式：
+     * 桌面：网格 600x600
+     * 手机：网格自适应宽度
+
+5. 文件输出
+   - templates/index.html（完整HTML）
+   - static/style.css（所有样式）
+   - static/script.js（所有JavaScript逻辑）
+
+代码结构示例：
+
+HTML结构：
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>像素拼图墙</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>像素拼图墙</h1>
+        
+        <div class="controls">
+            <select id="templateSelect">
+                <option value="heart">❤️ 爱心</option>
+                <option value="plane">✈️ 飞机</option>
+                <option value="balloon">🎈 气球</option>
+            </select>
+            
+            <input type="file" id="fileInput" multiple accept="image/*">
+            <button id="uploadBtn">上传图片</button>
+            <div id="status"></div>
+        </div>
+        
+        <div id="grid" class="pixel-grid"></div>
+    </div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>
+```
+
+JavaScript核心功能：
+```javascript
+let currentTemplate = 'heart';
+
+// 初始化
+async function init() {
+    await loadGridStatus(currentTemplate);
+}
+
+// 加载网格状态
+async function loadGridStatus(template) {
+    const response = await fetch(`/api/grid-status?template=${template}`);
+    const data = await response.json();
+    renderGrid(data.pixels);
+}
+
+// 渲染网格（20x20）
+function renderGrid(pixels) {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    grid.style.gridTemplateColumns = 'repeat(20, 1fr)';
+    grid.style.gridTemplateRows = 'repeat(20, 1fr)';
+    
+    for (let row = 0; row < 20; row++) {
+        for (let col = 0; col < 20; col++) {
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            
+            const pixel = pixels.find(p => p.row === row && p.col === col);
+            if (pixel) {
+                cell.style.backgroundImage = `url(${pixel.image_url})`;
+            }
+            
+            grid.appendChild(cell);
+        }
+    }
+}
+
+// 上传图片
+async function uploadImages() {
+    const files = document.getElementById('fileInput').files;
+    for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append('template', currentTemplate);
+        formData.append('file', files[i]);
+        
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            // 更新网格
+            await loadGridStatus(currentTemplate);
+        }
+    }
+}
+
+// 事件监听
+document.getElementById('templateSelect').addEventListener('change', (e) => {
+    currentTemplate = e.target.value;
+    loadGridStatus(currentTemplate);
+});
+
+document.getElementById('uploadBtn').addEventListener('click', uploadImages);
+
+init();
+```
+
+输出要求：
+- 3个完整文件：index.html, style.css, script.js
+- 代码清晰易读，注释完整
+- 确保所有功能可用
+- 美观现代的UI设计
+
+只输出完整的代码文件内容，无需额外说明。
+

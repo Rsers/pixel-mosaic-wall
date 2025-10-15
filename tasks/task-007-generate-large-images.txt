@@ -1,0 +1,78 @@
+# 任务：批量生成缺失的大图版本
+
+## 背景
+- 网站已实现鼠标悬停显示大图功能
+- 新上传的图片会自动生成缩略图(50x50)和大图(300x300)
+- 旧图片只有缩略图，导致浏览器404错误
+
+## 目标
+为服务器上已存在的所有缩略图批量生成对应的大图版本
+
+## 技术要求
+1. **输入：** 读取原始缩略图（50x50），文件名格式：`{row}_{col}.jpg`
+2. **处理：** 使用 Pillow 放大到 300x300（保持正方形）
+3. **算法：** 使用 LANCZOS 算法保证质量
+4. **输出：** 保存为 JPEG，质量 90%，文件名格式：`{row}_{col}_large.jpg`
+5. **优化：** 跳过已存在的 `_large.jpg` 文件，避免重复处理
+
+## 文件路径
+- 项目路径：`~/pixel-art-wall/`
+- 图片目录结构：
+  - `static/uploads/heart/` - 心形模板图片
+  - `static/uploads/plane/` - 飞机模板图片
+  - `static/uploads/balloon/` - 气球模板图片
+
+## 输出要求
+1. **脚本名称：** `generate_large_images.py`
+2. **位置：** 直接放在项目根目录 `~/pixel-art-wall/`
+3. **功能：**
+   - 遍历所有模板目录（heart, plane, balloon）
+   - 查找所有缩略图（*.jpg，但不包括 *_large.jpg）
+   - 为每个缩略图生成对应的大图版本
+   - 显示进度和统计信息
+
+## 实现细节
+```python
+from PIL import Image
+import os
+
+# 遍历三个模板目录
+templates = ['heart', 'plane', 'balloon']
+base_dir = os.path.expanduser('~/pixel-art-wall/static/uploads')
+
+for template in templates:
+    template_dir = os.path.join(base_dir, template)
+    
+    # 查找所有缩略图
+    for filename in os.listdir(template_dir):
+        if filename.endswith('.jpg') and '_large' not in filename:
+            # 检查是否已存在大图
+            large_filename = filename.replace('.jpg', '_large.jpg')
+            large_path = os.path.join(template_dir, large_filename)
+            
+            if not os.path.exists(large_path):
+                # 读取缩略图
+                thumbnail_path = os.path.join(template_dir, filename)
+                img = Image.open(thumbnail_path)
+                
+                # 放大到 300x300
+                large_img = img.resize((300, 300), Image.LANCZOS)
+                
+                # 保存大图
+                large_img.save(large_path, 'JPEG', quality=90)
+                print(f"Generated: {template}/{large_filename}")
+```
+
+## 验证要求
+1. 脚本执行完成后，输出生成的文件数量
+2. 验证生成的大图尺寸为 300x300
+3. 确认文件命名格式正确
+
+## 注意事项
+- 使用 `Image.LANCZOS` 而不是 `Image.Resampling.LANCZOS`（兼容旧版 Pillow）
+- 路径使用 `os.path.expanduser()` 处理 `~`
+- 添加错误处理，避免单个文件失败影响整体流程
+
+## 只输出
+完整可执行的 Python 脚本代码，无需额外说明
+

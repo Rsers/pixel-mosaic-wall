@@ -1,0 +1,181 @@
+# 任务：添加波浪传递动画效果
+
+## 背景
+用户希望在像素拼图墙上添加炫酷的动画效果，让填充的格子产生波浪传递的视觉效果，一个接一个地闪烁或高亮，循环播放。
+
+## 目标
+实现多种传递动画效果，用户可以选择开启/关闭动画，以及选择不同的动画模式。
+
+## 技术要求
+
+### 1. 动画模式（至少实现 3 种）
+
+**模式1：波浪扩散（Wave）**
+- 从中心点开始，向外圈扩散
+- 每个圈层的格子同时高亮
+- 类似水波纹效果
+
+**模式2：顺序流动（Flow）**
+- 按照格子的行列顺序（从左到右，从上到下）
+- 一个接一个地高亮
+- 流畅的传递感
+
+**模式3：随机闪烁（Sparkle）**
+- 随机选择格子进行闪烁
+- 营造星光闪烁的效果
+
+### 2. 动画效果实现
+
+**高亮效果：**
+- 使用 CSS 动画：`transform: scale(1.15)` + `box-shadow` + `filter: brightness(1.3)`
+- 添加发光边框：`border: 2px solid rgba(255, 255, 255, 0.9)`
+- 动画时长：0.5-0.8s
+
+**传递效果：**
+- 使用 `setInterval` 或 `requestAnimationFrame` 控制
+- 每个格子高亮延迟：100-200ms
+- 循环播放
+
+### 3. 控制面板
+
+在页面上添加动画控制：
+
+```html
+<div class="animation-controls">
+    <label>
+        <input type="checkbox" id="enableAnimation"> 启用动画效果
+    </label>
+    <select id="animationMode">
+        <option value="wave">波浪扩散</option>
+        <option value="flow">顺序流动</option>
+        <option value="sparkle">随机闪烁</option>
+    </select>
+    <label>
+        速度: <input type="range" id="animationSpeed" min="50" max="500" value="150">
+    </label>
+</div>
+```
+
+### 4. 代码结构
+
+**CSS 部分（static/style.css）：**
+
+```css
+/* 动画高亮效果 */
+@keyframes highlightPulse {
+    0% {
+        transform: scale(1);
+        filter: brightness(1);
+        box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+    }
+    50% {
+        transform: scale(1.15);
+        filter: brightness(1.4);
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+    }
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
+        box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+    }
+}
+
+.grid-cell.animate-highlight {
+    animation: highlightPulse 0.6s ease-in-out;
+}
+
+/* 动画控制面板样式 */
+.animation-controls {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 1rem;
+    border-radius: 12px;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+```
+
+**JavaScript 部分（static/script.js）：**
+
+需要实现以下功能：
+
+1. **动画管理器类：**
+```javascript
+class AnimationManager {
+    constructor(gridElement, filledCells) {
+        this.gridElement = gridElement;
+        this.filledCells = filledCells; // 所有已填充的格子元素
+        this.isRunning = false;
+        this.currentMode = 'wave';
+        this.speed = 150;
+        this.intervalId = null;
+    }
+    
+    start() { /* 开始动画 */ }
+    stop() { /* 停止动画 */ }
+    setMode(mode) { /* 切换模式 */ }
+    setSpeed(speed) { /* 设置速度 */ }
+    
+    // 模式实现
+    waveAnimation() { /* 波浪扩散 */ }
+    flowAnimation() { /* 顺序流动 */ }
+    sparkleAnimation() { /* 随机闪烁 */ }
+}
+```
+
+2. **波浪扩散算法：**
+- 计算每个格子到中心点的距离
+- 按距离分组
+- 从近到远依次高亮每组
+
+3. **顺序流动算法：**
+- 按 row * 20 + col 排序
+- 依次高亮每个格子
+
+4. **随机闪烁算法：**
+- 每次随机选择 5-10 个格子
+- 同时高亮
+
+### 5. 性能优化
+
+- 使用 `requestAnimationFrame` 而非 `setInterval`（如果可能）
+- 动画运行时，暂停自动刷新
+- 避免频繁的 DOM 操作
+- 使用 CSS 类切换而非直接修改 style
+
+### 6. 用户体验
+
+- 默认关闭动画（避免干扰）
+- 动画运行时，悬停预览和点击查看功能仍然可用
+- 提供平滑的开关过渡
+
+## 输出要求
+
+生成以下完整文件：
+
+1. **static/style.css** - 添加动画样式和控制面板样式
+2. **static/script.js** - 添加动画管理逻辑
+3. **templates/index.html** - 添加动画控制面板 HTML
+
+## 实现注意事项
+
+- 只对已填充的格子（`.grid-cell.filled`）应用动画
+- 确保动画不会影响现有的悬停和点击功能
+- 动画高亮时，临时移除悬停事件，避免冲突
+- 使用 `classList.add/remove` 而非修改 style
+
+## 验证要求
+
+1. 勾选"启用动画"，动画开始播放
+2. 切换动画模式，立即应用新模式
+3. 调整速度滑块，动画速度实时变化
+4. 取消勾选，动画停止
+5. 动画运行时，悬停和点击功能正常
+
+## 只输出
+
+三个完整的文件内容，包含所有现有功能 + 新增动画功能
+

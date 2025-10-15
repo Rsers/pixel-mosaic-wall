@@ -1,0 +1,301 @@
+## 任务：添加鼠标悬停显示大图功能
+
+### 需求描述
+用户需求：鼠标放到具体的一个像素上面时，显示该图片的大图预览。
+
+### 功能目标
+1. **鼠标悬停触发**：鼠标移动到已填充的像素上时显示大图
+2. **大图预览**：显示300x300px的清晰大图（vs 当前50x50缩略图）
+3. **流畅体验**：悬停立即显示，移开自动消失
+4. **性能优化**：大图懒加载，仅在需要时请求
+
+### 技术方案
+
+#### 方案选择（推荐方案2）
+
+**方案1：Tooltip悬浮提示**
+- 优点：轻量，不遮挡网格
+- 缺点：大图显示空间有限
+
+**方案2：Modal弹窗（推荐）** ✅
+- 优点：大图清晰，空间充足，用户体验好
+- 缺点：需要额外的CSS和JS
+- 触发：鼠标悬停0.5秒后显示（防止误触）
+
+**方案3：侧边栏预览**
+- 优点：不遮挡网格，可同时查看多个
+- 缺点：占用屏幕空间
+
+### 实现细节
+
+#### 1. 后端修改（`src/app.py`）
+
+**目标**：保存两个版本的图片
+- 缩略图：50x50px（用于网格展示）
+- 大图：300x300px（用于悬停预览）
+
+**修改函数**：`resize_and_save_image`
+- 修改为生成两个文件：
+  - `{row}_{col}.jpg`（50x50缩略图）
+  - `{row}_{col}_large.jpg`（300x300大图）
+
+**关键代码逻辑**：
+```python
+def resize_and_save_image(file, save_path, thumb_size=(50, 50), large_size=(300, 300)):
+    """
+    缩放并保存图片（中心裁剪成正方形，生成缩略图和大图）
+    
+    Args:
+        file: 上传的文件对象
+        save_path: 缩略图保存路径（如 /path/to/0_1.jpg）
+        thumb_size: 缩略图尺寸，默认(50, 50)
+        large_size: 大图尺寸，默认(300, 300)
+    
+    Returns:
+        tuple: (success: bool, large_path: str) 成功标志和大图路径
+    """
+    try:
+        # 1. 打开并转换为RGB
+        image = Image.open(file)
+        if image.mode in ('RGBA', 'LA'):
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            background.paste(image, mask=image.split()[-1])
+            image = background
+        elif image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # 2. 中心裁剪成正方形（共用逻辑）
+        width, height = image.size
+        min_dimension = min(width, height)
+        left = (width - min_dimension) // 2
+        top = (height - min_dimension) // 2
+        right = left + min_dimension
+        bottom = top + min_dimension
+        image_square = image.crop((left, top, right, bottom))
+        
+        # 3. 生成缩略图（50x50）
+        thumb_image = image_square.resize(thumb_size, Image.Resampling.LANCZOS)
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        thumb_image.save(save_path, 'JPEG', quality=85, optimize=True)
+        
+        # 4. 生成大图（300x300）
+        # 路径：0_1.jpg → 0_1_large.jpg
+        large_path = save_path.replace('.jpg', '_large.jpg')
+        large_image = image_square.resize(large_size, Image.Resampling.LANCZOS)
+        large_image.save(large_path, 'JPEG', quality=90, optimize=True)
+        
+        return True, large_path
+    except Exception as e:
+        print(f"图片处理失败: {e}")
+        return False, None
+```
+
+**调用位置修改**（`/api/upload` 路由）：
+```python
+# 原代码（第169行）
+if not resize_and_save_image(file, save_path):
+    return jsonify({"success": False, "error": "图片处理失败"}), 500
+
+# 修改为
+success, large_path = resize_and_save_image(file, save_path)
+if not success:
+    return jsonify({"success": False, "error": "图片处理失败"}), 500
+
+# 数据库保存时，可选：记录large_path（或前端根据规则生成）
+# 简化方案：前端根据缩略图URL自动生成大图URL（xxx.jpg → xxx_large.jpg）
+```
+
+**API响应**（可选，推荐简化方案）：
+```python
+# 返回时可选包含large_url，或前端自动生成
+return jsonify({
+    "success": True,
+    "position": {"row": row, "col": col},
+    "image_url": image_url,  # /static/uploads/heart/0_1.jpg
+    # "large_url": large_url  # 可选字段
+})
+```
+
+#### 2. 前端修改（`static/script.js`）
+
+**目标**：监听鼠标悬停事件，显示大图Modal
+
+**新增HTML结构**（在 `templates/index.html` 末尾添加）：
+```html
+<!-- 大图预览Modal -->
+<div id="imageModal" class="modal">
+    <div class="modal-content">
+        <img id="modalImage" src="" alt="预览大图">
+    </div>
+</div>
+```
+
+**JavaScript事件监听**（在 `renderGrid` 函数中）：
+```javascript
+// 在创建grid-cell时添加悬停事件
+function renderGrid(pixels) {
+    // ... 现有代码 ...
+    
+    // 为已填充的像素添加悬停事件
+    if (pixel && pixel.image_url) {
+        cell.classList.add('filled');
+        cell.style.backgroundImage = `url(${pixel.image_url})`;
+        cell.title = `已填充: (${row}, ${col})`;
+        
+        // 新增：悬停显示大图
+        let hoverTimer = null;
+        
+        cell.addEventListener('mouseenter', function(e) {
+            // 延迟500ms显示，防止误触
+            hoverTimer = setTimeout(() => {
+                showImagePreview(pixel.image_url);
+            }, 500);
+        });
+        
+        cell.addEventListener('mouseleave', function(e) {
+            // 取消延迟显示
+            if (hoverTimer) {
+                clearTimeout(hoverTimer);
+                hoverTimer = null;
+            }
+            // 隐藏Modal
+            hideImagePreview();
+        });
+    }
+}
+
+// 显示大图预览
+function showImagePreview(thumbnailUrl) {
+    // 生成大图URL：/static/uploads/heart/0_1.jpg → /static/uploads/heart/0_1_large.jpg
+    const largeUrl = thumbnailUrl.replace('.jpg', '_large.jpg');
+    
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    
+    modalImage.src = largeUrl;
+    modal.style.display = 'flex';
+}
+
+// 隐藏大图预览
+function hideImagePreview() {
+    const modal = document.getElementById('imageModal');
+    modal.style.display = 'none';
+}
+```
+
+#### 3. CSS样式（`static/style.css`）
+
+**新增Modal样式**：
+```css
+/* 大图预览Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+    position: relative;
+    max-width: 90%;
+    max-height: 90%;
+    animation: zoomIn 0.3s ease;
+}
+
+.modal-content img {
+    display: block;
+    width: 300px;
+    height: 300px;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    object-fit: cover;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes zoomIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 悬停提示 */
+.grid-cell.filled:hover {
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+}
+```
+
+#### 4. HTML修改（`templates/index.html`）
+
+**在 `</body>` 前添加**：
+```html
+<!-- 大图预览Modal -->
+<div id="imageModal" class="modal">
+    <div class="modal-content">
+        <img id="modalImage" src="" alt="预览大图">
+    </div>
+</div>
+```
+
+### 优化建议
+
+#### 性能优化
+1. **懒加载**：大图仅在悬停时加载（浏览器自动处理）
+2. **缓存**：浏览器自动缓存已加载的大图
+3. **延迟显示**：500ms延迟防止快速滑过时频繁触发
+
+#### 用户体验优化
+1. **防抖动**：快速滑过不触发预览
+2. **流畅动画**：Modal淡入+缩放动画
+3. **清晰提示**：悬停时cursor变为pointer，边框高亮
+
+#### 存储成本
+- 单张缩略图：~4KB（50x50）
+- 单张大图：~20KB（300x300）
+- 128张总成本：~3MB（可接受）
+
+### 修改文件清单
+1. **后端**：`src/app.py`（`resize_and_save_image`函数 + `/api/upload`路由）
+2. **前端JS**：`static/script.js`（`renderGrid`函数 + 新增两个函数）
+3. **前端CSS**：`static/style.css`（新增Modal样式）
+4. **前端HTML**：`templates/index.html`（新增Modal结构）
+
+### 测试验证
+1. 悬停在已填充的像素上，0.5秒后是否显示大图？
+2. 鼠标移开时，大图是否立即消失？
+3. 快速滑过多个像素，是否不会频繁触发？
+4. 大图是否清晰（300x300）？
+5. 动画是否流畅？
+
+### 输出要求
+1. 输出修改后的 `resize_and_save_image` 函数（完整代码）
+2. 输出 `/api/upload` 路由中需要修改的部分（调用位置）
+3. 输出新增的JavaScript代码（`showImagePreview`、`hideImagePreview`函数 + `renderGrid`修改）
+4. 输出新增的CSS代码（Modal样式）
+5. 输出新增的HTML代码（Modal结构）
+6. 无需其他说明，直接输出可用代码
+
+### 注意事项
+- 保持与现有代码的兼容性
+- 不修改数据库结构（大图URL前端自动生成）
+- 确保图片路径正确（xxx.jpg → xxx_large.jpg）
+- 处理图片加载失败的情况（可选：fallback到缩略图）
+

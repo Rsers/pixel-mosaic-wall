@@ -1,0 +1,135 @@
+任务：开发Flask后端API
+
+项目背景：
+创建一个像素拼图墙网站，用户上传的图片作为"像素点"填充到预设的图案模板中。
+
+技术要求：
+- 使用 Flask 框架
+- SQLite 数据库存储像素数据
+- 图片存储在文件系统
+- 图片自动缩放为50x50像素
+
+数据库表结构：
+```sql
+CREATE TABLE pixels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_name TEXT NOT NULL,
+    row INTEGER NOT NULL,
+    col INTEGER NOT NULL,
+    image_path TEXT,
+    upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(template_name, row, col)
+);
+```
+
+API接口要求：
+
+1. GET /
+   - 返回主页面（渲染 templates/index.html）
+
+2. GET /api/templates
+   - 返回可用的模板列表
+   - 响应：{"templates": ["heart", "plane", "balloon"]}
+
+3. POST /api/upload
+   - 接收参数：
+     * template: 模板名称（heart/plane/balloon）
+     * file: 上传的图片文件
+   - 处理流程：
+     a) 验证图片格式（仅允许 jpg, png, gif）
+     b) 验证文件大小（< 5MB）
+     c) 从 templates_data.py 获取该模板的空闲像素位置
+     d) 将图片缩放为 50x50 像素（使用 PIL）
+     e) 保存图片到 static/uploads/模板名/row_col.jpg
+     f) 插入数据库记录
+     g) 返回插入的位置坐标
+   - 成功响应：{"success": true, "position": {"row": 5, "col": 10}, "image_url": "/static/uploads/heart/5_10.jpg"}
+   - 失败响应：{"success": false, "error": "错误信息"}
+
+4. GET /api/grid-status?template=heart
+   - 返回指定模板的所有已填充像素
+   - 响应：{"pixels": [{"row": 5, "col": 10, "image_url": "/static/uploads/heart/5_10.jpg"}, ...]}
+
+代码结构要求：
+
+```python
+from flask import Flask, request, jsonify, render_template
+from PIL import Image
+import sqlite3
+import os
+from datetime import datetime
+from werkzeug.utils import secure_filename
+import sys
+sys.path.append(os.path.dirname(__file__))
+from templates_data import get_template, get_pixel_positions
+
+app = Flask(__name__, 
+            template_folder='../templates',
+            static_folder='../static')
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+# 数据库初始化函数
+def init_db():
+    """创建数据库和表"""
+    pass
+
+# 辅助函数
+def allowed_file(filename):
+    """检查文件扩展名"""
+    pass
+
+def get_next_empty_position(template_name):
+    """获取下一个空闲的像素位置"""
+    # 1. 从 templates_data 获取所有需要填充的位置
+    # 2. 查询数据库已填充的位置
+    # 3. 返回第一个未填充的位置
+    pass
+
+def resize_and_save_image(file, save_path, size=(50, 50)):
+    """缩放并保存图片"""
+    pass
+
+# 路由实现
+@app.route('/')
+def index():
+    """主页"""
+    pass
+
+@app.route('/api/templates', methods=['GET'])
+def get_templates():
+    """获取模板列表"""
+    pass
+
+@app.route('/api/upload', methods=['POST'])
+def upload_image():
+    """上传图片"""
+    pass
+
+@app.route('/api/grid-status', methods=['GET'])
+def grid_status():
+    """获取拼图状态"""
+    pass
+
+if __name__ == '__main__':
+    init_db()
+    app.run(host='0.0.0.0', port=5000, debug=True)
+```
+
+错误处理要求：
+- 文件格式错误：返回 400 错误
+- 文件过大：返回 413 错误
+- 模板已满：返回 409 错误，消息 "Template is full"
+- 数据库错误：返回 500 错误
+- 所有错误必须有清晰的错误消息
+
+输出要求：
+- 完整可运行的 Python 代码
+- 包含详细注释
+- 包含错误处理
+- 代码清晰易读
+- 确保所有函数都实现完整
+
+只输出完整的 Python 代码，保存为 app.py，无需额外说明。
+

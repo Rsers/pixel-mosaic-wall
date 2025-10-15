@@ -1,0 +1,107 @@
+## 任务：修复像素拼图展示问题
+
+### 问题描述
+1. **非正方形问题**：每张上传的图片显示时不是正方形，导致拼图效果不理想
+2. **看不清内容**：图片太多时，每个像素太小，内容模糊不清
+3. **性能问题**：上传的原始图片体积较大，加载速度慢
+
+### 修复目标
+1. **图片正方形裁剪**：所有上传图片必须裁剪成正方形（中心裁剪）
+2. **图片压缩**：生成两种尺寸
+   - 缩略图：50x50px（用于网格展示）
+   - 原图缩放：300x300px（用于点击查看大图，可选功能）
+3. **前端优化**：确保 CSS 正确显示正方形像素
+
+### 技术方案
+
+#### 1. 后端图片处理（app.py）
+修改 `resize_and_save_image` 函数：
+- **中心裁剪**：将图片先裁剪成正方形（取短边，中心裁剪）
+- **生成缩略图**：50x50px JPEG（质量85%）
+- **压缩优化**：使用 Pillow 的 LANCZOS 算法
+
+**裁剪逻辑：**
+```python
+def resize_and_save_image(file, save_path, size=(50, 50)):
+    try:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        
+        image = Image.open(file)
+        
+        # 转换为RGB
+        if image.mode in ('RGBA', 'LA'):
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            background.paste(image, mask=image.split()[-1])
+            image = background
+        elif image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # 核心：中心裁剪成正方形
+        width, height = image.size
+        min_dimension = min(width, height)
+        
+        left = (width - min_dimension) // 2
+        top = (height - min_dimension) // 2
+        right = left + min_dimension
+        bottom = top + min_dimension
+        
+        image = image.crop((left, top, right, bottom))
+        
+        # 缩放到目标尺寸
+        image = image.resize(size, Image.Resampling.LANCZOS)
+        
+        # 保存（JPEG质量85%压缩）
+        image.save(save_path, 'JPEG', quality=85, optimize=True)
+        
+        return True
+    except Exception as e:
+        print(f"图片处理失败: {e}")
+        return False
+```
+
+**调用位置：**
+- `/api/upload` 路由的第168行
+- 当前参数：`resize_and_save_image(file, save_path)`
+- 保持默认参数即可（50x50）
+
+#### 2. 前端CSS优化（style.css）
+确保 `.grid-cell` 正确显示正方形：
+```css
+.grid-cell {
+    aspect-ratio: 1 / 1;  /* 强制正方形 */
+    background-size: cover;  /* 填充整个单元格 */
+    background-position: center;  /* 居中显示 */
+    background-repeat: no-repeat;
+}
+```
+
+#### 3. 可选：点击查看大图功能
+如需实现（可选）：
+- 前端：点击图片时弹出 modal 显示原图
+- 后端：保存两个版本（50px缩略图 + 300px原图）
+
+### 修改文件清单
+1. **必须修改**：
+   - `src/app.py`（第80-103行，`resize_and_save_image`函数）
+   - `static/style.css`（`.grid-cell` 样式）
+
+2. **可选修改**：
+   - 如需大图功能：额外保存300x300版本
+
+### 测试验证
+1. 上传不同比例的图片（横图、竖图、正方形）
+2. 检查网格中图片是否都是正方形
+3. 检查图片内容是否清晰可辨
+4. 检查加载速度是否提升
+
+### 输出要求
+1. 只输出修改后的完整函数代码（`resize_and_save_image`）
+2. 输出 CSS 样式代码（`.grid-cell`）
+3. 无需其他说明，直接输出可用代码
+
+### 注意事项
+- 保持现有文件结构不变
+- 不修改API接口
+- 不修改数据库结构
+- 保持与现有前端的兼容性
+
