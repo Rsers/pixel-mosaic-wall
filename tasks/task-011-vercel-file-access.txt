@@ -1,0 +1,106 @@
+# 任务：Vercel 环境下文件上传和访问适配
+
+## 问题背景
+项目在 Vercel 部署后，文件上传失败（500 错误）。
+
+已修复的部分：
+- ✅ 上传目录：Vercel 环境使用 /tmp/uploads
+- ✅ 数据库路径：Vercel 环境使用 /tmp/pixels.db
+
+未解决的问题：
+- ❌ 静态文件访问：文件存在 /tmp/uploads/ 但返回的 URL 是 /static/uploads/
+- ❌ Vercel 无法通过 Nginx 访问 /tmp 目录
+
+## 核心挑战
+Vercel 无服务器环境：
+1. 文件系统只读（除了 /tmp）
+2. /tmp 目录不是静态文件服务目录
+3. 每次部署会清空 /tmp（文件临时性）
+
+## 技术要求
+
+### 1. 创建 API 路由提供上传的图片
+**文件：** `src/app.py`
+
+**需要实现：**
+```python
+@app.route('/uploads/<template>/<filename>')
+def serve_upload(template, filename):
+    """
+    从 /tmp/uploads/ 读取文件并返回
+    支持缩略图和大图（*_large.jpg）
+    """
+    # 1. 判断环境（Vercel vs 本地）
+    # 2. Vercel：从 /tmp/uploads/ 读取
+    # 3. 本地：从 static/uploads/ 读取
+    # 4. 安全检查：防止路径穿越攻击
+    # 5. 返回图片文件（Content-Type: image/jpeg）
+    pass
+```
+
+### 2. 修改上传 API 返回的 URL
+**文件：** `src/app.py`
+
+**修改位置：** `/api/upload` 路由（第233行）
+
+**修改逻辑：**
+```python
+# 当前代码（错误）
+image_url = f"/static/uploads/{template_name}/{filename}"
+
+# 修改为（正确）
+if os.environ.get("VERCEL"):
+    image_url = f"/uploads/{template_name}/{filename}"  # 使用新的 API 路由
+else:
+    image_url = f"/static/uploads/{template_name}/{filename}"  # 本地仍用静态文件
+```
+
+### 3. 修改网格状态 API 返回的 URL
+**文件：** `src/app.py`
+
+**修改位置：** `/api/grid-status` 路由（第273行）
+
+**修改逻辑：**
+```python
+# 当前代码（部分错误）
+image_url = image_path.replace("static/", "/static/")
+
+# 修改为（正确）
+if os.environ.get("VERCEL"):
+    # /tmp/uploads/heart/0_1.jpg → /uploads/heart/0_1.jpg
+    image_url = image_path.replace("/tmp/uploads/", "/uploads/")
+else:
+    # static/uploads/heart/0_1.jpg → /static/uploads/heart/0_1.jpg
+    image_url = image_path.replace("static/", "/static/")
+```
+
+### 4. 安全考虑
+- 路径穿越攻击防护：禁止 `..` 在文件名中
+- 文件名白名单：只允许 `\d+_\d+(_large)?.jpg`
+- 模板名白名单：只允许 `heart|plane|balloon`
+
+### 5. 错误处理
+- 文件不存在：返回 404
+- 路径非法：返回 400
+- 读取失败：返回 500
+
+## 输出要求
+输出完整的 `src/app.py` 文件，包含：
+1. 新增的 `/uploads/<template>/<filename>` 路由
+2. 修改后的 `/api/upload` 路由
+3. 修改后的 `/api/grid-status` 路由
+4. 保持其他代码不变
+
+## 注意事项
+1. **必须支持本地和 Vercel 两种环境**
+2. **必须支持缩略图和大图（*_large.jpg）**
+3. **必须保持现有功能不变**
+4. **必须处理所有错误情况**
+5. **使用 `send_file()` 返回图片**
+
+## 测试场景
+1. 本地环境：上传图片 → 访问 `/static/uploads/...` → 显示正常
+2. Vercel 环境：上传图片 → 访问 `/uploads/...` → 显示正常
+3. 悬停预览：显示大图（`*_large.jpg`）
+4. 点击全屏：显示大图
+

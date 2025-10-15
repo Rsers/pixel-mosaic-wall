@@ -1,4 +1,3 @@
-from flask import Flask, request, jsonify, render_template
 from PIL import Image
 import sqlite3
 import os
@@ -11,12 +10,20 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from templates_data import get_template, get_pixel_positions
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
-app.config["UPLOAD_FOLDER"] = "static/uploads"
+
+# Vercel 环境下使用 /tmp 目录存储上传文件
+if os.environ.get("VERCEL"):
+    UPLOAD_FOLDER = "/tmp/uploads"
+else:
+    UPLOAD_FOLDER = "static/uploads"
+
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5MB
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 
 # Vercel 环境下的数据库路径
-DB_PATH = os.environ.get('VERCEL') and '/tmp/pixels.db' or 'pixels.db'
+DB_PATH = os.environ.get("VERCEL") and "/tmp/pixels.db" or "pixels.db"
+
 
 # 在每次请求前确保数据库存在
 @app.before_request
@@ -24,6 +31,7 @@ def ensure_db():
     """确保数据库已初始化"""
     if not os.path.exists(DB_PATH):
         init_db()
+
 
 # 数据库初始化函数
 def init_db():
@@ -89,13 +97,13 @@ def get_next_empty_position(template_name):
 def resize_and_save_image(file, save_path, thumb_size=(50, 50), large_size=(300, 300)):
     """
     缩放并保存图片（中心裁剪成正方形，生成缩略图和大图）
-    
+
     Args:
         file: 上传的文件对象
         save_path: 缩略图保存路径（如 /path/to/0_1.jpg）
         thumb_size: 缩略图尺寸，默认(50, 50)
         large_size: 大图尺寸，默认(300, 300)
-    
+
     Returns:
         tuple: (success: bool, large_path: str) 成功标志和大图路径
     """
@@ -108,7 +116,7 @@ def resize_and_save_image(file, save_path, thumb_size=(50, 50), large_size=(300,
             image = background
         elif image.mode != "RGB":
             image = image.convert("RGB")
-        
+
         # 2. 中心裁剪成正方形（共用逻辑）
         width, height = image.size
         min_dimension = min(width, height)
@@ -117,22 +125,62 @@ def resize_and_save_image(file, save_path, thumb_size=(50, 50), large_size=(300,
         right = left + min_dimension
         bottom = top + min_dimension
         image_square = image.crop((left, top, right, bottom))
-        
+
         # 3. 生成缩略图（50x50）
         thumb_image = image_square.resize(thumb_size, Image.Resampling.LANCZOS)
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         thumb_image.save(save_path, "JPEG", quality=85, optimize=True)
-        
+
         # 4. 生成大图（300x300）
         # 路径：0_1.jpg → 0_1_large.jpg
         large_path = save_path.replace(".jpg", "_large.jpg")
         large_image = image_square.resize(large_size, Image.Resampling.LANCZOS)
         large_image.save(large_path, "JPEG", quality=90, optimize=True)
-        
+
         return True, large_path
     except Exception as e:
         print(f"图片处理失败: {e}")
         return False, None
+
+
+@app.route('/uploads/<template>/<filename>')
+def serve_upload(template, filename):
+    """
+    从 /tmp/uploads/ 读取文件并返回
+    支持缩略图和大图（*_large.jpg）
+    """
+    try:
+        # 安全检查：防止路径穿越攻击
+        if '..' in template or '..' in filename:
+            return "非法路径", 400
+        
+        # 模板名白名单
+        if template not in ['heart', 'plane', 'balloon']:
+            return "模板不存在", 404
+        
+        # 文件名白名单：只允许 \d+_\d+(_large)?.jpg
+        import re
+        if not re.match(r'^\d+_\d+(_large)?\.jpg$', filename):
+            return "文件名格式错误", 400
+        
+        # 判断环境并构建文件路径
+        if os.environ.get("VERCEL"):
+            # Vercel：从 /tmp/uploads/ 读取
+            file_path = f"/tmp/uploads/{template}/{filename}"
+        else:
+            # 本地：从 static/uploads/ 读取
+            file_path = f"static/uploads/{template}/{filename}"
+        
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            return "文件不存在", 404
+        
+        # 返回图片文件
+        return send_file(file_path, mimetype='image/jpeg')
+        
+    except Exception as e:
+        print(f"文件服务失败: {e}")
+        return "服务器错误", 500
 
 
 # 路由实现
@@ -220,8 +268,12 @@ def upload_image():
                 os.remove(save_path)
             return jsonify({"success": False, "error": f"数据库错误: {str(e)}"}), 500
 
-        # 返回成功响应
-        image_url = f"/static/uploads/{template_name}/{filename}"
+        # 返回成功响应 - 修改URL生成逻辑
+        if os.environ.get("VERCEL"):
+            image_url = f"/uploads/{template_name}/{filename}"  # 使用新的 API 路由
+        else:
+            image_url = f"/static/uploads/{template_name}/{filename}"  # 本地仍用静态文件
+
         return jsonify(
             {
                 "success": True,
@@ -260,8 +312,13 @@ def grid_status():
         pixels = []
         for row, col, image_path in pixels_data:
             if image_path and os.path.exists(image_path):
-                # 转换为URL路径
-                image_url = image_path.replace("static/", "/static/")
+                # 修改URL转换逻辑
+                if os.environ.get("VERCEL"):
+                    # /tmp/uploads/heart/0_1.jpg → /uploads/heart/0_1.jpg
+                    image_url = image_path.replace("/tmp/uploads/", "/uploads/")
+                else:
+                    # static/uploads/heart/0_1.jpg → /static/uploads/heart/0_1.jpg
+                    image_url = image_path.replace("static/", "/static/")
                 pixels.append({"row": row, "col": col, "image_url": image_url})
 
         return jsonify({"pixels": pixels})
