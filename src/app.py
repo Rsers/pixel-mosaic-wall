@@ -15,12 +15,21 @@ app.config["UPLOAD_FOLDER"] = "static/uploads"
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5MB
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 
+# Vercel 环境下的数据库路径
+DB_PATH = os.environ.get('VERCEL') and '/tmp/pixels.db' or 'pixels.db'
+
+# 在每次请求前确保数据库存在
+@app.before_request
+def ensure_db():
+    """确保数据库已初始化"""
+    if not os.path.exists(DB_PATH):
+        init_db()
 
 # 数据库初始化函数
 def init_db():
     """创建数据库和表"""
     try:
-        conn = sqlite3.connect("pixels.db")
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -37,7 +46,7 @@ def init_db():
         )
         conn.commit()
         conn.close()
-        print("数据库初始化成功")
+        print(f"数据库初始化成功: {DB_PATH}")
     except Exception as e:
         print(f"数据库初始化失败: {e}")
 
@@ -57,7 +66,7 @@ def get_next_empty_position(template_name):
             return None
 
         # 2. 查询数据库已填充的位置
-        conn = sqlite3.connect("pixels.db")
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "SELECT row, col FROM pixels WHERE template_name = ?", (template_name,)
@@ -195,7 +204,7 @@ def upload_image():
 
         # 插入数据库记录
         try:
-            conn = sqlite3.connect("pixels.db")
+            conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             cursor.execute(
                 "INSERT INTO pixels (template_name, row, col, image_path) VALUES (?, ?, ?, ?)",
@@ -238,7 +247,7 @@ def grid_status():
             return jsonify({"success": False, "error": "无效的模板名称"}), 400
 
         # 查询数据库
-        conn = sqlite3.connect("pixels.db")
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
             "SELECT row, col, image_path FROM pixels WHERE template_name = ?",
